@@ -19,14 +19,14 @@ namespace SPC12
             LoadProgram(_cpuTestProg, 0xa00);
         }
 
-        public byte ReadByte(ushort address)
+        public byte ReadByte(int address)
         {
             byte val = _mem[address & 0xfff];
             //Console.WriteLine("Read: {0}-{1}", Helpers.ToOctal(address), Helpers.ToOctal(val, 3));
             return val;
         }
 
-        public void WriteByte(ushort address, byte value)
+        public void WriteByte(int address, byte value)
         {
             //Console.WriteLine("Write: {0}-{1}", Helpers.ToOctal(address), Helpers.ToOctal(value,3));
             _mem[address & 0xfff] = value;
@@ -80,7 +80,7 @@ namespace SPC12
             "305", "004", "040", "131", "152", "064", "004", "020",     // 5060
             "131", "152", "071", "004", "060", "004", "040", "131",     // 5070
             "152", "100", "004", "200", "010", "200", "131", "152",     // 5100
-            "107", "010", "000", "200", "131", "152", "116", "135",     // 5110
+            "107", "010", "000", "010", "200", "131", "152", "116",     // 5110
             "135", "152", "121", "010", "200", "115", "152", "126",     // 5120
             "004", "110", "000", "131", "152", "134", "010", "315",     // 5130
             "010", "325", "010", "335", "004", "110", "377", "004",     // 5140

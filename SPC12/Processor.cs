@@ -8,8 +8,8 @@ namespace SPC12
 {
     public interface IMemoryBus
     {
-        byte ReadByte(ushort address);
-        void WriteByte(ushort address, byte value);
+        byte ReadByte(int address);
+        void WriteByte(int address, byte value);
     }
 
     public interface IIOBus
@@ -38,8 +38,7 @@ namespace SPC12
 
         public void Step()
         {
-            byte byte1 = _mem.ReadByte(_p);
-            _p++;
+            byte byte1 = _mem.ReadByte(P);
 
             // let's just write out some instruction encodings here:
             // LOAD/STORE B:        110xxxxx or 111xxxxx
@@ -60,68 +59,62 @@ namespace SPC12
             switch (op)
             {
                 case 0x0:
-                    switch (byte1)
                     {
-                        // ARITHMETIC/LOGICAL:  00000100
-                        // REGISTER TRANSFER:   00001000
-                        // PULSE/SHIFT:         00001100
+                        P++;
+                        byte byte2 = GetImmediateCommandByte();
 
-                        case 0x04:  // Arithmetic / Logical
-                            {
-                                byte byte2 = GetImmediateCommandByte();
+                        // consume the command bytes
+                        P++;
+
+                        switch (byte1)
+                        {
+                            // ARITHMETIC/LOGICAL:  00000100
+                            // REGISTER TRANSFER:   00001000
+                            // PULSE/SHIFT:         00001100
+
+                            case 0x04:  // Arithmetic / Logical
                                 ArithmeticLogical(byte2);
-                            }
-                            break;
+                                break;
 
-                        case 0x08:  // Register/Transfer
-                            {
-                                byte byte2 = GetImmediateCommandByte();
+                            case 0x08:  // Register/Transfer
                                 RegisterTransfer(byte2);
-                            }
-                            break;
+                                break;
 
-                        case 0x0c:  // Pulse/Shift
-                            {
-                                byte byte2 = GetImmediateCommandByte();
+                            case 0x0c:  // Pulse/Shift
                                 PulseShift(byte2);
-                            }
-                            break;
+                                break;
 
-                        default:    // Must be augment mem.
-                            {
-                                byte byte2 = GetImmediateCommandByte();
+                            default:    // Must be augment mem.
                                 AugmentMemoryAddressing(byte1, byte2);
-                            }
-                            break;
-                    }
+                                break;
+                        }
 
-                    // consume the command bytes
-                    _p++;
+                        
+                    }
                     break;
 
                 // SHARED ARITHMETIC:   0001xxxx
                 case 0x1:
                     {
-                        _p--;
+                        P++;
                         byte byte2 = GetSharedCommandByte(byte1, ArithmeticLogicalSharedOffset);
                         ArithmeticLogical(byte2);
-                        _p++;
                     }
                     break;
 
                 // SHARED REGISTER TRAN:0010xxxx
                 case 0x2:
                     {
-                        _p--;
+                        P++;
                         byte byte2 = GetSharedCommandByte(byte1, RegisterTransferSharedOffset);
                         RegisterTransfer(byte2);
-                        _p++;
                     }
                     break;
 
                 // SHARED PULSE:        0011xxxx
                 case 0x3:
                     {
+                        P++;
                         byte byte2 = GetSharedCommandByte(byte1, PulseShiftSharedOffset);
                         PulseShift(byte2);
                     }
@@ -130,14 +123,15 @@ namespace SPC12
                 // SKIP CONDITIONALLY:  010xxxxx
                 case 0x4:
                 case 0x5:
+                    P++;
                     ConditionalSkip(byte1);
                     break;
 
                 // JUMP UNCONDITIONALLY:0110xxxx
                 case 0x6:
                     {
-                        byte byte2 = _mem.ReadByte(_p);
-                        _p = (ushort)(((byte1 & 0xf) << 8) | byte2);
+                        byte byte2 = _mem.ReadByte(P + 1);
+                        P = (ushort)(((byte1 & 0xf) << 8) | byte2);
 
                         // Why?  Because this system is weiiiird.
                         _zero = true;
@@ -148,12 +142,12 @@ namespace SPC12
                 // LOAD B EXTENDED:     0111xxxx
                 case 0x7:
                     {
-                        byte byte2 = _mem.ReadByte(_p);
+                        byte byte2 = _mem.ReadByte(P + 1);
                         int eoa = ((byte1 & 0xf) << 8) | byte2;
                         B = (ushort)(_mem.ReadByte((ushort)(eoa)) | (_mem.ReadByte((ushort)(eoa+1)) << 8));
                         _zero = true;
                         _plus = true;
-                        _p++;
+                        P += 2;
                     }
                     break;
 
@@ -163,6 +157,7 @@ namespace SPC12
                 case 0xa:
                 case 0xb:
                     {
+                        P++;
                         byte byte2 = GetSharedCommandByte(byte1, AugmentedMemorySharedOffset);
                         AugmentMemoryAddressing(byte1, byte2);
                     }
@@ -172,44 +167,44 @@ namespace SPC12
                 case 0xc:
                     {
                         // TODO: factor this out (see JUMP UNCONDITIONALLY)
-                        byte byte2 = _mem.ReadByte(_p);
+                        byte byte2 = _mem.ReadByte(P + 1);
                         _mem.WriteByte((ushort)(((byte1 & 0xf) << 8) | byte2), (byte)B);
                         _zero = (B & 0xff) == 0;
                         _plus = (B & 0x80) == 0;
-                        _p++;
+                        P += 2;
                     }
                     break;
 
                 case 0xd:
                     {
                         // TODO: factor this out (see JUMP UNCONDITIONALLY)
-                        byte byte2 = _mem.ReadByte(_p);
+                        byte byte2 = _mem.ReadByte(P + 1);
                         _mem.WriteByte((ushort)((((byte1 & 0xf) << 8) | byte2) + X), (byte)B);
                         _zero = (B & 0xff) == 0;
                         _plus = (B & 0x80) == 0;
-                        _p++;
+                        P += 2;
                     }
                     break;
 
                 case 0xe:
                     {
                         // TODO: factor this out (see JUMP UNCONDITIONALLY)
-                        byte byte2 = _mem.ReadByte(_p);
+                        byte byte2 = _mem.ReadByte(P + 1);
                         B = _mem.ReadByte((ushort)(((byte1 & 0xf) << 8) | byte2));
                         _zero = (B & 0xff) == 0;
                         _plus = (B & 0x80) == 0;
-                        _p++;
+                        P += 2;
                     }
                     break;
 
                 case 0xf:
                     {
                         // TODO: factor this out (see JUMP UNCONDITIONALLY)
-                        byte byte2 = _mem.ReadByte(_p);
+                        byte byte2 = _mem.ReadByte(P + 1);
                         B = _mem.ReadByte((ushort)((((byte1 & 0xf) << 8) | byte2) + X));
                         _zero = (B & 0xff) == 0;
                         _plus = (B & 0x80) == 0;
-                        _p++;
+                        P += 2;
                     }
                     break;
             }
@@ -283,7 +278,7 @@ namespace SPC12
 
         private byte GetImmediateCommandByte()
         {
-            return _mem.ReadByte(_p);
+            return _mem.ReadByte(P);
 
         }
 
@@ -311,7 +306,9 @@ namespace SPC12
             int opcode = (byte2 >> 4);
 
             // Operand: 0 - B register, 1 - immediate value
-            ushort operand = (byte2 & 0x08) == 0 ? B : _mem.ReadByte(++_p);
+            bool immediate = (byte2 & 0x08) != 0;
+
+            ushort operand = (byte2 & 0x08) == 0 ? B : _mem.ReadByte(P++);
             int reg = byte2 & 0x7;
             switch (opcode)
             {
@@ -403,7 +400,7 @@ namespace SPC12
                     }
                     else
                     {
-                        _link = (GetRegister(src) & 0xff) == 0;
+                        _link = (GetRegister(src) & 0xff) == 1;     // this should be zero, right?
                         SetRegister(dest, GetRegister(src) - 1);
                     }
                     break;
@@ -418,7 +415,7 @@ namespace SPC12
             // TODO: maybe factor this out
             _zero = (GetRegister(dest) & 0xff) == 0;
             _plus = (GetRegister(dest) & 0x80) == 0;
-                  }
+        }
 
         private void PulseShift(byte byte2)
         {
@@ -642,7 +639,7 @@ namespace SPC12
 
             if (conditionMet)
             {
-                _p = (ushort)(_p + offset);
+                P = (ushort)(P + offset);
             }
         }
 
