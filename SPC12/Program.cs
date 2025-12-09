@@ -8,8 +8,20 @@
 
             Memory m = new Memory(1);
             Processor p = new Processor(m, new IO());
-
+            Disassembler d = new Disassembler(m);
             p.P = 0xa00; // 5000 octal
+
+            int i = 0xc77;
+            while (i <= 0xcba)
+            {
+                string disassembly;
+                int nextI = d.Disassemble(i, out disassembly);
+                Console.WriteLine("{0}  {1}", Helpers.ToOctal((ushort)i), disassembly);
+
+                i = nextI;
+            }
+
+            Console.ReadLine();
 
             while (true)
             {
@@ -25,7 +37,9 @@
                     p.Plus, 
                     p.IOStatus);
 
-                Console.WriteLine("{0} - {1}", Helpers.ToOctal(p.P), Helpers.ToOctal(m.ReadByte(p.P)));
+                string disassembly;
+                d.Disassemble(p.P, out disassembly);
+                Console.WriteLine("{0} - {1}", Helpers.ToOctal(p.P), disassembly);
 
                 //Console.ReadLine();
 

@@ -23,6 +23,7 @@ namespace SPC12
         {
             _mem = mem;
             _io = io;
+            _tty = new TTY();
         }
 
         public void Reset()
@@ -34,6 +35,8 @@ namespace SPC12
             _p = 0;
             _b = 0;
             _e = 0;
+
+            _tty.Reset();
         }
 
         public void Step()
@@ -60,11 +63,10 @@ namespace SPC12
             {
                 case 0x0:
                     {
-                        P++;
                         byte byte2 = GetImmediateCommandByte();
 
-                        // consume the command bytes
-                        P++;
+                        // consume the instruction bytes thus far
+                        P+=2;
 
                         switch (byte1)
                         {
@@ -88,8 +90,6 @@ namespace SPC12
                                 AugmentMemoryAddressing(byte1, byte2);
                                 break;
                         }
-
-                        
                     }
                     break;
 
@@ -130,8 +130,7 @@ namespace SPC12
                 // JUMP UNCONDITIONALLY:0110xxxx
                 case 0x6:
                     {
-                        byte byte2 = _mem.ReadByte(P + 1);
-                        P = (ushort)(((byte1 & 0xf) << 8) | byte2);
+                        P = GetImmediateAddress(byte1);
 
                         // Why?  Because this system is weiiiird.
                         _zero = true;
@@ -142,7 +141,7 @@ namespace SPC12
                 // LOAD B EXTENDED:     0111xxxx
                 case 0x7:
                     {
-                        byte byte2 = _mem.ReadByte(P + 1);
+                        byte byte2 = GetImmediateAddressByte();
                         int eoa = ((byte1 & 0xf) << 8) | byte2;
                         B = (ushort)(_mem.ReadByte((ushort)(eoa)) | (_mem.ReadByte((ushort)(eoa+1)) << 8));
                         _zero = true;
@@ -166,9 +165,7 @@ namespace SPC12
                 // LOAD/STORE B:        110xxxxx or 111xxxxx
                 case 0xc:
                     {
-                        // TODO: factor this out (see JUMP UNCONDITIONALLY)
-                        byte byte2 = _mem.ReadByte(P + 1);
-                        _mem.WriteByte((ushort)(((byte1 & 0xf) << 8) | byte2), (byte)B);
+                        _mem.WriteByte(GetImmediateAddress(byte1), (byte)B);
                         _zero = (B & 0xff) == 0;
                         _plus = (B & 0x80) == 0;
                         P += 2;
@@ -177,9 +174,7 @@ namespace SPC12
 
                 case 0xd:
                     {
-                        // TODO: factor this out (see JUMP UNCONDITIONALLY)
-                        byte byte2 = _mem.ReadByte(P + 1);
-                        _mem.WriteByte((ushort)((((byte1 & 0xf) << 8) | byte2) + X), (byte)B);
+                        _mem.WriteByte(GetImmediateAddress(byte1) + X, (byte)B);
                         _zero = (B & 0xff) == 0;
                         _plus = (B & 0x80) == 0;
                         P += 2;
@@ -188,9 +183,7 @@ namespace SPC12
 
                 case 0xe:
                     {
-                        // TODO: factor this out (see JUMP UNCONDITIONALLY)
-                        byte byte2 = _mem.ReadByte(P + 1);
-                        B = _mem.ReadByte((ushort)(((byte1 & 0xf) << 8) | byte2));
+                        B = _mem.ReadByte(GetImmediateAddress(byte1));
                         _zero = (B & 0xff) == 0;
                         _plus = (B & 0x80) == 0;
                         P += 2;
@@ -199,9 +192,7 @@ namespace SPC12
 
                 case 0xf:
                     {
-                        // TODO: factor this out (see JUMP UNCONDITIONALLY)
-                        byte byte2 = _mem.ReadByte(P + 1);
-                        B = _mem.ReadByte((ushort)((((byte1 & 0xf) << 8) | byte2) + X));
+                        B = _mem.ReadByte(GetImmediateAddress(byte1) + X);
                         _zero = (B & 0xff) == 0;
                         _plus = (B & 0x80) == 0;
                         P += 2;
@@ -278,8 +269,20 @@ namespace SPC12
 
         private byte GetImmediateCommandByte()
         {
-            return _mem.ReadByte(P);
+            return _mem.ReadByte(P + 1);
 
+        }
+
+        private byte GetImmediateAddressByte()
+        {
+            return _mem.ReadByte(P + 1);
+
+        }
+
+        private ushort GetImmediateAddress(byte byte1)
+        {
+            byte byte2 = _mem.ReadByte(P + 1);
+            return (ushort)(((byte1 & 0xf) << 8) | byte2);
         }
 
         private byte GetSharedCommandByte(byte byte1, ushort sharedOffset)
@@ -309,7 +312,7 @@ namespace SPC12
             bool immediate = (byte2 & 0x08) != 0;
 
             ushort operand = (byte2 & 0x08) == 0 ? B : _mem.ReadByte(P++);
-            int reg = byte2 & 0x7;
+            Register reg = (Register)(byte2 & 0x7);
             switch (opcode)
             {
                 case 0: // Zero
@@ -341,13 +344,16 @@ namespace SPC12
                     {
                         B = operand;
                         SetRegister(reg, B);
+                        _zero = true;
+                        _plus = true;
                     }
                     break;
 
                 case 8:   // subtract
                     {
                         int r = GetRegister(reg);
-                        _link = (r & 0xff) - (operand & 0xff) < 0 ? true : false;
+                        // TODO: is this link behavior correct (see also the decrement RT instructions)
+                        _link = (r & 0xff) - (operand & 0xff) > 0 ? true : false;
                         r = r - operand;
                         SetRegister(reg, r);
                     }
@@ -367,15 +373,18 @@ namespace SPC12
 
             }
 
-            _zero = (GetRegister(reg) & 0xff) == 0;
-            _plus = (GetRegister(reg) & 0x80) == 0;
+            if (opcode != 4)        // sigh.  See p. 3-8, ALD docs.
+            {
+                _zero = (GetRegister(reg) & 0xff) == 0;
+                _plus = (GetRegister(reg) & 0x80) == 0;
+            }
         }
 
         private void RegisterTransfer(byte byte2)
         {
             int command = (byte2 >> 6);
-            int dest = ((byte2 & 0x38) >> 3);
-            int src = (byte2 & 0x7);
+            Register dest = (Register)((byte2 & 0x38) >> 3);
+            Register src = (Register)(byte2 & 0x7);
 
             // TODO: LINK logic sucks assssssss
             switch (command)
@@ -394,13 +403,13 @@ namespace SPC12
                 case 2: // Transfer and decrement
                     // Special case; if src is the B register then the destination just gets 7777.
                     // Why?  I have no idea, it's explicitly called out as a special case in the docs.
-                    if (src == 5)
+                    if (src == Register.B)
                     {
                         SetRegister(dest, 0xfff);
                     }
                     else
                     {
-                        _link = (GetRegister(src) & 0xff) == 1;     // this should be zero, right?
+                        _link = (GetRegister(src) & 0xff) > 0;     // this should be zero, right?
                         SetRegister(dest, GetRegister(src) - 1);
                     }
                     break;
@@ -434,7 +443,7 @@ namespace SPC12
         private void Shift(byte byte2)
         {
             int command = (byte2 >> 3);
-            int reg = byte2 & 0x7;
+            Register reg = (Register)(byte2 & 0x7);
 
             switch (command) 
             {
@@ -443,6 +452,7 @@ namespace SPC12
                         int r = GetRegister(reg) & 0xff;
                         SetRegister(reg, r >> 1);
                         _link = (r & 0x1) != 0;
+                        _plus = true; // P. 3-11
                     }
                     break;
 
@@ -473,7 +483,11 @@ namespace SPC12
             }
 
             _zero = (GetRegister(reg) & 0xff) == 0;
-            _plus = (GetRegister(reg) & 0x80) == 0;
+
+            if (command != 0)  // right shift is a little special boy, see p. 3-11
+            {
+                _plus = (GetRegister(reg) & 0x80) == 0;
+            }
         }
 
         private void Pulse(byte byte2)
@@ -502,11 +516,15 @@ namespace SPC12
                     throw new NotImplementedException("Pulse command not implemented.");
 
                 case 5: // Transfer (B) upper to B
-                    _b = (ushort)(_b >> 8);
+                    B = (ushort)(B >> 8);
+                    _plus = true;
+                    _zero = (B == 0);
                     break;
 
                 case 6: // Load E register
-                    _e = _b & 0x3;
+                    _e = B & 0x3;
+                    _zero = true;   // p. 3-15
+                    _plus = true;
                     break;
 
                 case 7: // Interrogate interrupt
@@ -519,10 +537,10 @@ namespace SPC12
         private void AugmentMemoryAddressing(byte byte1, byte byte2)
         {
             int field = byte1 & 0x3;
-            int preIndexReg = byte2 >> 6;
+            Register preIndexReg = (Register)(byte2 >> 6);
             bool indirectAddressing = (byte2 & 0x20) != 0;
             int command = (byte2 & 0x18) >> 3;
-            int reg = byte2 & 0x7;
+            Register reg = (Register)(byte2 & 0x7);
 
             B = (ushort)(field * 2);
             if (preIndexReg != 0)
@@ -539,9 +557,9 @@ namespace SPC12
                 // This "address" is actually 12 bits of address and 4 bits specifying indexing options
                 // to be used by the augmented indirect instruction that reads it.
                 // This is a really, really weird architecture.
-                int postIndexReg = indirectAddress >> 14;
+                Register postIndexReg = (Register)(indirectAddress >> 14);
                 bool autoIncrement = (indirectAddress & 0x2000) != 0;
-                B = (ushort)(indirectAddress & 0xfff);
+                B = (ushort)indirectAddress;
 
                 if (postIndexReg != 0)
                 {
@@ -581,7 +599,7 @@ namespace SPC12
                     {
                         _mem.WriteByte(B, (byte)GetRegister(reg));
 
-                        // See p. 38 of the PDF
+                        // See p. 3-21 of the PDF
                         _zero = true;
                         _plus = true;
                     }
@@ -644,32 +662,34 @@ namespace SPC12
         }
 
 
-        private ushort GetRegister(int reg)
+        // TODO: Replace switch statement with array of registers and just index into that;
+        // this is silly.
+        private ushort GetRegister(Register reg)
         {
             switch (reg)
             {
-                case 0:
+                case Register.A:
                     return A;
 
-                case 1:
+                case Register.X:
                     return X;
 
-                case 2:
+                case Register.Y:
                     return Y;
 
-                case 3:
+                case Register.Z:
                     return Z;
 
-                case 4:
+                case Register.P:
                     return P;
 
-                case 5:
+                case Register.B:
                     return B;
 
-                case 6:
+                case Register.YY:
                     return YY;
 
-                case 7:
+                case Register.ZZ:
                     return ZZ;
 
                 default:
@@ -677,39 +697,39 @@ namespace SPC12
             }
         }
 
-        private void SetRegister(int reg, int val)
+        private void SetRegister(Register reg, int val)
         {
             switch (reg)
             {
-                case 0:
+                case Register.A:
                     A = (ushort)val;
                     break;
 
-                case 1:
+                case Register.X:
                     X = (ushort)val;
                     break;
 
-                case 2:
+                case Register.Y:
                     Y = (ushort)val;
                     break;
 
-                case 3:
+                case Register.Z:
                     Z = (ushort)val;
                     break;
 
-                case 4:
+                case Register.P:
                     P = (ushort)val;
                     break;
 
-                case 5:
+                case Register.B:
                     B = (ushort)val;
                     break;
 
-                case 6:
+                case Register.YY:
                     Y = (ushort)((Y & 0xff) | ((val & 0xf) << 8));
                     break;
 
-                case 7:
+                case Register.ZZ:
                     Z = (ushort)((Z & 0xff) | ((val & 0xf) << 8));
                     break;
 
@@ -718,7 +738,19 @@ namespace SPC12
             }
         }
 
-        // Registers (12 bit)
+        private enum Register
+        {
+            A = 0,
+            X,
+            Y,
+            Z,
+            P,
+            B,
+            YY,
+            ZZ
+        }
+
+        // Registers backing store (12 bit)
         ushort _a;
         ushort _x;
         ushort _y;
@@ -740,6 +772,9 @@ namespace SPC12
         static readonly ushort RegisterTransferSharedOffset  = 0x20;
         static readonly ushort PulseShiftSharedOffset        = 0x30;
         static readonly ushort AugmentedMemorySharedOffset   = 0x40;
+
+        // Built-in weird-ass bit-banged TTY interface
+        TTY _tty;
 
         IMemoryBus _mem;
         IIOBus _io;
