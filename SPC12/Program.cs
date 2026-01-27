@@ -25,7 +25,7 @@
 
             while (true)
             {
-                Console.WriteLine("P={0} A={1} X={2} Y={3} Z={4} B={5} Link={6} Zero={7} Plus={8} IO={9}", 
+                Console.WriteLine("P={0} A={1} X={2} Y={3} Z={4} B={5} Link={6} Zero={7} Plus={8} IO={9} E={10}", 
                     Helpers.ToOctal(p.P),
                     Helpers.ToOctal(p.A),
                     Helpers.ToOctal(p.X),
@@ -35,7 +35,8 @@
                     p.Link,
                     p.Zero, 
                     p.Plus, 
-                    p.IOStatus);
+                    p.IOStatus,
+                    p.E);
 
                 string disassembly;
                 d.Disassemble(p.P, out disassembly);

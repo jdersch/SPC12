@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿
 namespace SPC12
 {
     public interface IMemoryBus
@@ -41,7 +36,7 @@ namespace SPC12
 
         public void Step()
         {
-            byte byte1 = _mem.ReadByte(P);
+            byte byte1 = ReadByte(P);
 
             // let's just write out some instruction encodings here:
             // LOAD/STORE B:        110xxxxx or 111xxxxx
@@ -143,7 +138,7 @@ namespace SPC12
                     {
                         byte byte2 = GetImmediateAddressByte();
                         int eoa = ((byte1 & 0xf) << 8) | byte2;
-                        B = (ushort)(_mem.ReadByte((ushort)(eoa)) | (_mem.ReadByte((ushort)(eoa+1)) << 8));
+                        B = (ushort)(ReadByte((ushort)(eoa)) | (ReadByte((ushort)(eoa+1)) << 8));
                         _zero = true;
                         _plus = true;
                         P += 2;
@@ -165,7 +160,7 @@ namespace SPC12
                 // LOAD/STORE B:        110xxxxx or 111xxxxx
                 case 0xc:
                     {
-                        _mem.WriteByte(GetImmediateAddress(byte1), (byte)B);
+                        WriteByte(GetImmediateAddress(byte1), (byte)B);
                         _zero = (B & 0xff) == 0;
                         _plus = (B & 0x80) == 0;
                         P += 2;
@@ -174,7 +169,7 @@ namespace SPC12
 
                 case 0xd:
                     {
-                        _mem.WriteByte(GetImmediateAddress(byte1) + X, (byte)B);
+                        WriteByte(GetImmediateAddress(byte1) + X, (byte)B);
                         _zero = (B & 0xff) == 0;
                         _plus = (B & 0x80) == 0;
                         P += 2;
@@ -183,7 +178,7 @@ namespace SPC12
 
                 case 0xe:
                     {
-                        B = _mem.ReadByte(GetImmediateAddress(byte1));
+                        B = ReadByte(GetImmediateAddress(byte1));
                         _zero = (B & 0xff) == 0;
                         _plus = (B & 0x80) == 0;
                         P += 2;
@@ -192,7 +187,7 @@ namespace SPC12
 
                 case 0xf:
                     {
-                        B = _mem.ReadByte(GetImmediateAddress(byte1) + X);
+                        B = ReadByte(GetImmediateAddress(byte1) + X);
                         _zero = (B & 0xff) == 0;
                         _plus = (B & 0x80) == 0;
                         P += 2;
@@ -237,6 +232,12 @@ namespace SPC12
             set { _b = (ushort)(value & 0xfff); }
         }
 
+        public int E
+        {
+            get { return _e; }
+            set { _e = value & 0x3; }
+        }
+
         public ushort YY
         {
             get { return (ushort)(_y >> 8); }
@@ -269,19 +270,19 @@ namespace SPC12
 
         private byte GetImmediateCommandByte()
         {
-            return _mem.ReadByte(P + 1);
+            return ReadByte(P + 1);
 
         }
 
         private byte GetImmediateAddressByte()
         {
-            return _mem.ReadByte(P + 1);
+            return ReadByte(P + 1);
 
         }
 
         private ushort GetImmediateAddress(byte byte1)
         {
-            byte byte2 = _mem.ReadByte(P + 1);
+            byte byte2 = ReadByte(P + 1);
             return (ushort)(((byte1 & 0xf) << 8) | byte2);
         }
 
@@ -301,7 +302,7 @@ namespace SPC12
             {
                 ccba = byte1 & 0xf;
             }
-            return _mem.ReadByte((ushort)(ccba + sharedOffset));
+            return ReadByte((ushort)(ccba + sharedOffset));
         }
 
         private void ArithmeticLogical(byte byte2)
@@ -311,7 +312,7 @@ namespace SPC12
             // Operand: 0 - B register, 1 - immediate value
             bool immediate = (byte2 & 0x08) != 0;
 
-            ushort operand = (byte2 & 0x08) == 0 ? B : _mem.ReadByte(P++);
+            ushort operand = (byte2 & 0x08) == 0 ? B : ReadByte(P++);
             Register reg = (Register)(byte2 & 0x7);
             switch (opcode)
             {
@@ -522,7 +523,7 @@ namespace SPC12
                     break;
 
                 case 6: // Load E register
-                    _e = B & 0x3;
+                    E = B;
                     _zero = true;   // p. 3-15
                     _plus = true;
                     break;
@@ -551,8 +552,8 @@ namespace SPC12
 
             if (indirectAddressing)
             {
-                int indirectAddress = _mem.ReadByte(B);
-                indirectAddress |= (_mem.ReadByte((ushort)(B + 1)) << 8);
+                int indirectAddress = ReadByte(B);
+                indirectAddress |= (ReadByte((ushort)(B + 1)) << 8);
 
                 // This "address" is actually 12 bits of address and 4 bits specifying indexing options
                 // to be used by the augmented indirect instruction that reads it.
@@ -577,19 +578,19 @@ namespace SPC12
             {
                 case 0: // Load:
                     {
-                        ushort operand = _mem.ReadByte(B);
+                        ushort operand = ReadByte(B);
                         SetRegister(reg, operand);
                     }
                     break;
                 case 1: // Store and zero:
                     {
-                        _mem.WriteByte(B, (byte)GetRegister(reg));
+                        WriteByte(B, (byte)GetRegister(reg));
                         SetRegister(reg, 0);
                     }
                     break;
                 case 2: // Add:
                     {
-                        byte operand = _mem.ReadByte(B);
+                        byte operand = ReadByte(B);
                         int result = operand + GetRegister(reg);
                         _link = (operand + (GetRegister(reg) & 0xff)) > 0xff;
                         SetRegister(reg, result);
@@ -597,7 +598,7 @@ namespace SPC12
                     break;
                 case 3: // Store:
                     {
-                        _mem.WriteByte(B, (byte)GetRegister(reg));
+                        WriteByte(B, (byte)GetRegister(reg));
 
                         // See p. 3-21 of the PDF
                         _zero = true;
@@ -735,6 +736,32 @@ namespace SPC12
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(reg));
+            }
+        }
+
+        private byte ReadByte(int addr)
+        {
+            if (addr < 0x800)
+            {
+                return _mem.ReadByte(addr);
+            }
+            else
+            {
+                // map in the proper block
+                return _mem.ReadByte((addr - 0x800) + E * 0x800);
+            }
+        }
+
+        private void WriteByte(int addr, byte val)
+        {
+            if (addr < 0x800)
+            {
+                _mem.WriteByte(addr, val);
+            }
+            else
+            {
+                // map in the proper block
+                _mem.WriteByte((addr - 0x800) + E * 0x800, val);
             }
         }
 
