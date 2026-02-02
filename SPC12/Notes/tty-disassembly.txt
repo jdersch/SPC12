@@ -1,0 +1,57 @@
+﻿0120  TO STB TB (0257)     ! TTY OUTPUT entrypoint - store return addr low byte
+0122     TBB
+0124     STB TB+1 (0260)   ! store return addr high nybble
+0126     SHRO B            ! shift zero to TTY  -- OUTPUT SPACE (0)
+0130     LDB TI+1 (0214)
+0132     STB T4+4 (0210)    SET 'OR' CMD (or in 0200 output)
+0134     ALD B, 0120
+0137     STB T4+1 (0205)    SET SERIAL CMD
+0141     LDB TA (0256) -- 366 
+0143  T1 STB TC (0261)      SET BIT COUNT
+0145  T2 LDB T3 (0147)      9MS DELAY
+0147  T3 RIC B, B           DELAY LOOP    increment B
+0151     STB TD (0262)
+0153     STB TD (0262)      these just kill time i guess
+0155     STB TD (0262)
+0157     STB TD (0262)
+0161     SKZ 2   !(0164)    loop until B overflows (end of delay)
+0162     JMP T3 (0147)      
+0164     LDB TC (0261)      COUNT BIT  - delay done
+0166     RIC B, B           B = bit count + 1
+0170     STB TC (0261)      store it back
+0172     SKR 4   !(0177)    skip if link reset (link gets set when bit count overflows to 0)
+0173     SHLO B     ! circulate through link to TTY -- OUTPUT MARK (for end of character because link is 1 here -- see above)
+0175     JMP T2 (0145)      delay again -- keep MARK set for the duration
+0177     SKM 4   !(0204)    if bit count is positive then we are done; we sent the MARK last time through when the count was 0
+0200     ELB TB (0257)      EXIT (restore stored P into B)
+0202     RIC B, P           EXIT (return to P + 2)  (RIC is +1, CPU will increment P again for us after this instruction)
+0204  T4 SHCO A     ! circulate to TTY  SERIAL IN/OUT/ECHO      (modified by addr 0137 -- do the specified operation to input to A or output a bit from A)
+0206     AOR A, 0200        OUT=200,IN=000  (0200 value modified by 0132) -- set high bit for output
+0211     JMP T2             do 9ms delay again
+
+
+0213  TI PLR            TTY INPUT entrypoint        - reset link
+0215     SKR 2   !(0220)
+0216  TE PLS            TTY INPUT/ECHO entrypoint   - set link
+0220     STB TB (0257)      save return addr low 8 bits
+0222     TBB                B(4-0) gets B(11-8)
+0224     STB TB+1 (0260)    save return addr hi 4 bits
+0226     LDB TF (0263)      B gets 140 ("input/echo ccb")
+0230     SKS 2   !(0233)    if link bit set, skip to 0233 (just write 140 out)
+0231     LDB T5+1 (0246)    B gets 2nd byte of SHI A instruction
+0233     STB T4+1 (0205)    SET SERIAL COMMAND
+0235     TBB                B <- 0 (?)  B(11-8) should be 0 after 231
+0237     STB T4+4 (0210)    SET 'OR' CMD        modify 3rd byte of instruction to 0 for input (AOR doesn't set high bit)
+0241     LDB TA (0256)      
+0243     STB TC (0261)      SET BIT COUNT
+0245  T5 SHI A              LOOK FOR SPACE          loop until we read in enough zeroes to clear A, indicating a SPACE, the start of a new character
+0247     SKZ 2   !(0252)
+0250     JMP T5 (0245)
+0252     LDB TI+1 (0214)    4.5MS DELAY
+0254     JMP T3+2 (0151)    JUMP TO DELAY LOOP
+
+0256  TA 366            BIT COUNT
+0257  TB 2              RTRN ADDR STO
+0261  TC 0              BIT COUNTER
+0262  TD 0              DELAY LOOP STO
+0263  TF 140            INPUT/ECHO CCB

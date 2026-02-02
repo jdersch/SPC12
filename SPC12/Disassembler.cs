@@ -293,14 +293,17 @@ namespace SPC12
                 case 4: // Shift serial data in
                     return $"SHI {reg}";
 
+                case 8: //
+                    return $"SHRO {reg}     ! shift zero to TTY";
+
                 case 9: // Circulate register with link bit and data out
-                    return $"SHLO {reg}";
+                    return $"SHLO {reg}     ! circulate through link to TTY";
 
                 case 0xa: // Circulate serial data out
-                    return $"SHCO {reg}";
+                    return $"SHCO {reg}     ! circulate to TTY";
 
                 case 0xc: // Shift Serial Data In and Echo Out
-                    return $"SHIO {reg}";
+                    return $"SHIO {reg}     ! shift TTY & echo";
 
                 default:
                     return "INVALID SHIFT INSTRUCTION";

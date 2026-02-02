@@ -8,7 +8,7 @@ namespace SPC12
     {
         public Memory(uint sizeInModes) 
         {
-            _mem = new byte[sizeInModes * 4096];
+            _mem = new byte[sizeInModes * 2048];
 
             LoadProgram(_sharedBytes, 0x10);
 
@@ -27,7 +27,7 @@ namespace SPC12
 
         public byte ReadByte(int address)
         {
-            byte val = _mem[address & 0xfff];
+            byte val = _mem[address];
             //Console.WriteLine("Read: {0}-{1}", Helpers.ToOctal(address), Helpers.ToOctal(val, 3));
             return val;
         }
@@ -35,7 +35,7 @@ namespace SPC12
         public void WriteByte(int address, byte value)
         {
             //Console.WriteLine("Write: {0}-{1}", Helpers.ToOctal(address), Helpers.ToOctal(value,3));
-            _mem[address & 0xfff] = value;
+            _mem[address] = value;
         }
 
         private void LoadProgram(string[] data, ushort startAddr)
@@ -268,7 +268,7 @@ namespace SPC12
             "303 010 154 140 213 341 075 111",
             "010 310 010 351 014 206 010 154",
             "140 213 010 310 010 154 140 213",
-            "341 075 112 010 321 010 369 010",  // TODO: 36 *9* ??
+            "341 075 112 010 321 010 360 010",  // ADDR 356 was "369" in listing (byte 2 of RTR A,YY)
             "312 010 154 140 213 010 350 010",
             "325 111 010 143 301 075 010 154",
 
@@ -348,7 +348,7 @@ namespace SPC12
             "133 000 306 002 301 010 233 221",
             "050 141 305 020 226 053 010 133",  // 17070
 
-            "221 050 141 305 818 233 054 050",  // 17100
+            "221 050 141 305 010 233 054 050",  // 17100
             "157 103 356 220 111 155 101 061",
             "316 220 155 257 010 303 176 216",
             "024 131 155 150 004 313 010 156",
@@ -357,7 +357,7 @@ namespace SPC12
             "363 061 315 364 044 315 360 061",
             "315 361 046 315 355 061 315 356",  // 17170
 
-            "020 105 021 010 176 216 822 010",  // 17200
+            "020 105 021 010 176 216 022 010",  // 17200
             "330 052 316 220 156 055 221 016",
             "000 000 000 000 000 000 000 141",
             "353 000 000 000 000 000 000 141",

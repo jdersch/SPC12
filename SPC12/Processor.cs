@@ -14,6 +14,7 @@ namespace SPC12
 
     internal class Processor
     {
+        public static readonly float CycleTimeMicroseconds = 2.16f;
         public Processor(IMemoryBus mem, IIOBus io)
         {
             _mem = mem;
@@ -34,8 +35,14 @@ namespace SPC12
             _tty.Reset();
         }
 
-        public void Step()
+
+        /// <summary>
+        /// Executes a single instruction, returns the number of memory cycles consumed.
+        /// </summary>
+        /// <returns></returns>
+        public int Step()
         {
+            int cycles = 0;
             byte byte1 = ReadByte(P);
 
             // let's just write out some instruction encodings here:
@@ -70,19 +77,21 @@ namespace SPC12
                             // PULSE/SHIFT:         00001100
 
                             case 0x04:  // Arithmetic / Logical
-                                ArithmeticLogical(byte2);
+                                cycles = ArithmeticLogical(byte2);
                                 break;
 
                             case 0x08:  // Register/Transfer
-                                RegisterTransfer(byte2);
+                                 RegisterTransfer(byte2);
+                                cycles = 2;
                                 break;
 
                             case 0x0c:  // Pulse/Shift
                                 PulseShift(byte2);
+                                cycles = 2;
                                 break;
 
                             default:    // Must be augment mem.
-                                AugmentMemoryAddressing(byte1, byte2);
+                                cycles = AugmentMemoryAddressing(byte1, byte2);
                                 break;
                         }
                     }
@@ -93,7 +102,7 @@ namespace SPC12
                     {
                         P++;
                         byte byte2 = GetSharedCommandByte(byte1, ArithmeticLogicalSharedOffset);
-                        ArithmeticLogical(byte2);
+                        cycles = ArithmeticLogical(byte2);
                     }
                     break;
 
@@ -103,6 +112,7 @@ namespace SPC12
                         P++;
                         byte byte2 = GetSharedCommandByte(byte1, RegisterTransferSharedOffset);
                         RegisterTransfer(byte2);
+                        cycles = 2;
                     }
                     break;
 
@@ -112,6 +122,7 @@ namespace SPC12
                         P++;
                         byte byte2 = GetSharedCommandByte(byte1, PulseShiftSharedOffset);
                         PulseShift(byte2);
+                        cycles = 2;
                     }
                     break;
 
@@ -120,6 +131,7 @@ namespace SPC12
                 case 0x5:
                     P++;
                     ConditionalSkip(byte1);
+                    cycles = 1;
                     break;
 
                 // JUMP UNCONDITIONALLY:0110xxxx
@@ -130,6 +142,7 @@ namespace SPC12
                         // Why?  Because this system is weiiiird.
                         _zero = true;
                         _plus = true;
+                        cycles = 2;
                     }
                     break;
 
@@ -142,6 +155,7 @@ namespace SPC12
                         _zero = true;
                         _plus = true;
                         P += 2;
+                        cycles = 4;
                     }
                     break;
 
@@ -153,7 +167,7 @@ namespace SPC12
                     {
                         P++;
                         byte byte2 = GetSharedCommandByte(byte1, AugmentedMemorySharedOffset);
-                        AugmentMemoryAddressing(byte1, byte2);
+                        cycles = AugmentMemoryAddressing(byte1, byte2);
                     }
                     break;
 
@@ -164,6 +178,7 @@ namespace SPC12
                         _zero = (B & 0xff) == 0;
                         _plus = (B & 0x80) == 0;
                         P += 2;
+                        cycles = 3;
                     }
                     break;
 
@@ -173,6 +188,7 @@ namespace SPC12
                         _zero = (B & 0xff) == 0;
                         _plus = (B & 0x80) == 0;
                         P += 2;
+                        cycles = 3;
                     }
                     break;
 
@@ -182,6 +198,7 @@ namespace SPC12
                         _zero = (B & 0xff) == 0;
                         _plus = (B & 0x80) == 0;
                         P += 2;
+                        cycles = 3;
                     }
                     break;
 
@@ -191,9 +208,15 @@ namespace SPC12
                         _zero = (B & 0xff) == 0;
                         _plus = (B & 0x80) == 0;
                         P += 2;
+                        cycles = 3;
                     }
                     break;
             }
+
+            // Do this here for now, but the TTY should be moved outside the Processor methinks.
+            _tty.Clock(cycles);
+
+            return cycles;
         }
 
         public ushort A
@@ -268,16 +291,19 @@ namespace SPC12
             get { return _ioStatus; }
         }
 
+        public TTY TTY
+        { 
+            get { return _tty; }
+        }
+
         private byte GetImmediateCommandByte()
         {
             return ReadByte(P + 1);
-
         }
 
         private byte GetImmediateAddressByte()
         {
             return ReadByte(P + 1);
-
         }
 
         private ushort GetImmediateAddress(byte byte1)
@@ -305,14 +331,19 @@ namespace SPC12
             return ReadByte((ushort)(ccba + sharedOffset));
         }
 
-        private void ArithmeticLogical(byte byte2)
+        /// <summary>
+        /// Returns cycles consumed
+        /// </summary>
+        /// <param name="byte2"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        private int ArithmeticLogical(byte byte2)
         {
             int opcode = (byte2 >> 4);
 
             // Operand: 0 - B register, 1 - immediate value
             bool immediate = (byte2 & 0x08) != 0;
-
-            ushort operand = (byte2 & 0x08) == 0 ? B : ReadByte(P++);
+            ushort operand = immediate ? ReadByte(P++) : B;
             Register reg = (Register)(byte2 & 0x7);
             switch (opcode)
             {
@@ -379,6 +410,8 @@ namespace SPC12
                 _zero = (GetRegister(reg) & 0xff) == 0;
                 _plus = (GetRegister(reg) & 0x80) == 0;
             }
+
+            return immediate ? 3 : 2;
         }
 
         private void RegisterTransfer(byte byte2)
@@ -449,35 +482,72 @@ namespace SPC12
             switch (command) 
             {
                 case 0: // Shift register right
+                case 8: // 0's to TTY
                     {
                         int r = GetRegister(reg) & 0xff;
                         SetRegister(reg, r >> 1);
                         _link = (r & 0x1) != 0;
                         _plus = true; // P. 3-11
+
+                        if (command == 8)
+                        {
+                            // shifts a 0 to the TTY
+                            //Console.WriteLine("zero to tty");
+                            TTY.StrobePrinter(false);
+                        }
                     }
                     break;
 
                 case 1: // Circulate register with link bit
+                case 9: // with data out
                     {
                         int r = GetRegister(reg) & 0xff;
-                        SetRegister(reg, (r >> 1) | (_link ? 0x80 : 0x0));
-                        _link = (r & 0x1) != 0;
+                        bool oldLink = _link;
+                        SetRegister(reg, (r >> 1) | (oldLink ? 0x80 : 0x0));
+                        _link = (r & 0x1) != 0; // link gets the previous 0-bit
+
+                        if (command == 9)
+                        {
+                            TTY.StrobePrinter(oldLink);   // shift the previous link out the TTY
+                        }
                     }
                     break;
 
                 case 2: // Circulate register
+                case 0xa:   // with data out
                     {
                         int r = GetRegister(reg) & 0xff;
+                        //Console.WriteLine("circ out reg {0} {1}", reg, Helpers.ToOctal((ushort)r));
+                        _link = (r & 0x1) != 0;     // the textual description of SHCO on p. 3-13 does not mention the Link register.  But it later says (r)0 -> (Link)...
+                                                    // motorola docs also suggest that link is updated here
                         SetRegister(reg, (r >> 1) | (_link ? 0x80 : 0x0));
-                        _link = (r & 0x1) != 0;
+
+                        if (command == 0xa)
+                        {
+                            // current link to tty
+                            TTY.StrobePrinter(_link);
+                        }
                     }
                     break;
 
                 case 4: // Shift serial data in
-                case 9: // Circulate register with link bit and data out
-                case 0xa: // Circulate serial data out
-                case 0xc: // Shift Serial Data In and Echo Out
-                    throw new NotImplementedException("Shift with data stuff not implemented.");
+                case 0xc:   // also out
+                    {
+                        int r = GetRegister(reg) & 0xff;
+                        bool bit = TTY.StrobeKeyboard();
+                        int bitValue = bit ? 0x80 : 0x00;
+                        //Console.WriteLine("echo reg {0} {1}", reg, Helpers.ToOctal((ushort)r));
+                        SetRegister(reg, ((r >> 1) | bitValue));
+                        _link = (r & 0x1) != 0;
+                        _plus = (r & 0x80) == 0;
+
+                        if (command == 0xc)
+                        {
+                            // Also strobe the bit out
+                            TTY.StrobePrinter(bit);
+                        }
+                    }
+                    break;
 
                 default:
                     throw new InvalidOperationException("Invalid shift command.");
@@ -535,7 +605,13 @@ namespace SPC12
             }
         }
 
-        private void AugmentMemoryAddressing(byte byte1, byte byte2)
+        /// <summary>
+        /// Returns cycles consume
+        /// </summary>
+        /// <param name="byte1"></param>
+        /// <param name="byte2"></param>
+        /// <returns></returns>
+        private int AugmentMemoryAddressing(byte byte1, byte byte2)
         {
             int field = byte1 & 0x3;
             Register preIndexReg = (Register)(byte2 >> 6);
@@ -613,6 +689,8 @@ namespace SPC12
                 _zero = (GetRegister(reg) & 0xff) == 0;
                 _plus = (GetRegister(reg) & 0x80) == 0;
             }
+
+            return indirectAddressing ? 5 : 3;
         }
 
         private void ConditionalSkip(byte byte1)
@@ -741,6 +819,8 @@ namespace SPC12
 
         private byte ReadByte(int addr)
         {
+            addr = addr & 0xfff;
+
             if (addr < 0x800)
             {
                 return _mem.ReadByte(addr);
@@ -754,6 +834,8 @@ namespace SPC12
 
         private void WriteByte(int addr, byte val)
         {
+            addr = addr & 0xfff;
+
             if (addr < 0x800)
             {
                 _mem.WriteByte(addr, val);
