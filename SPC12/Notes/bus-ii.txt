@@ -1,0 +1,453 @@
+﻿16500     SKF 0   !(06501)
+16501     RIC P, Z
+16503     JMP CR
+16505     RIC P, B  !shared
+16506     JMP OI
+16510     RTR Z, Y
+16512     AZE X  !shared
+16513     LDB BT, X
+16515     SKN 2   !(06520)
+16516     JMP B?
+16520     RTR B, A  !shared
+16521     LDB OC
+16523     ASU A, B  !shared
+16524     SKZ 4   !(06531)
+16525     AAD X, 00003  !shared
+16527     JMP BC
+16531     LDB BT+1, X
+16533     RTR B, Z  !shared
+16534     LDB BT+2, X
+16536     RTR B, ZZ
+16540     LDB OM
+16542     RTR B, X  !shared
+16543     SKN 2   !(06546)
+16544     RIC X, X
+16546     RDC Z, P
+16550     ALD A, 00277  !shared
+16552     RIC P, B  !shared
+16553     JMP TO
+16555     JMP BA
+
+! data
+16557     G2S A, Y  !shared
+16560     SKF 2   !(06563)
+16561     G2L A, Y, I
+16563     G0L A, Y  !shared
+16564     G2A Y, Z
+16566     G6S A, Z, I  !shared
+16567     G2L ZZ, Z
+16571     G2L A, Y, I  !shared
+16572     G4A P, Z
+16574     LDB 05415, X
+16576     STB 06312
+16600     G4Z ZZ, Y, I
+16602     STB 01416, X
+16604     STB 01362
+16606     G6L A, A
+
+
+16610     RIC P, B  !shared
+16611     JMP AD
+16613     RIC P, B  !shared
+16614     JMP ML
+16616     RTR A, Z
+16620     RIC P, B  !shared
+16621     JMP O3
+16623     ALD A, 00240  !shared
+16625     RIC P, B  !shared
+16626     JMP TO
+16630     RIC P, B  !shared
+16631     JMP OI
+16633     LDB OF
+16635     SKZ 6   !(06644)
+16636     RTR Z, A
+16640     RIC P, B
+16642     JMP MS
+16644     LDB OC
+16646     RIC B, P  !shared                     **** SHOULD BE RTR B,A - FIXED
+16647     ASU A, 00215  !shared
+16651     SKN 2   !(06654)
+16652     JMP BA
+16654     RIC Y, Y  !shared
+16655     JMP CA
+
+
+16657     RIC P, Z
+16661     JMP CR
+16663     ALD X, 00014  !shared
+16665     LDB RZ, X
+16667     RTR B, A  !shared
+16670     RIC P, B  !shared
+16671     JMP TO
+16673     ALD A, 00240  !shared
+16675     RIC P, B  !shared
+16676     JMP TO
+16700     LDB RZ+1, X
+16702     RTR B, Z  !shared
+16703     LDB RZ+2, X
+16705     RTR B, ZZ
+16707     RIC P, B  !shared
+16710     JMP O4
+16712     ALD A, 00240  !shared
+16714     RIC P, B  !shared
+16715     JMP TO
+16717     RIC P, B  !shared
+16720     JMP OI
+16722     LDB OF
+16724     SKN 2   !(06727)
+16725     JMP R4
+16727     RTR Z, B  !shared
+16730     STB RZ+1, X
+16732     TBB  !shared
+16733     STB RZ+2, X
+16735     LDB OC
+16737     RTR B, A  !shared
+16740     ASU A, 00215  !shared
+16742     SKN 2   !(06745)
+16743     JMP BA
+16745     ASU X, 00003  !shared
+16747     SKM 2   !(06752)
+16750     JMP R2
+16752     JMP BA
+
+16754     STB 05000, X
+16756     G0S X, Z
+16760     G0L A, A
+16762     STB 04000, X
+16764     G0L Y, Z
+16766     G0L A, A
+16770     STB 00400
+
+*** TODO: MISALIGNED should start at 16773
+16772     G0S YY, X, I
+16774     G4S A, Y  !shared
+16775     RTR B, Z  !shared
+16776     TBB  !shared
+16777     TBB  !shared
+
+17000     STB HC
+17002     LDB OF
+17004     SKN 2   !(07007)
+17005     JMP H3
+17007     G4L A, Z  !shared
+17010     SKZ 2   !(07013)
+17011     JMP HX
+17013     G0S Y, Z
+17015     RIC P, B  !shared
+17016     JMP ML
+17020     G2S A, Z  !shared
+17021     G6L A, Z  !shared
+17022     RIC P, B  !shared
+17023     JMP MS
+17025     RDC B, A  !B <- 7777
+17027     G4S A, Z  !shared
+17030     RIC Z, Z
+17032     G0S YY, Z
+17034     RIC Y, Y  !shared
+17035     RIC P, B  !shared
+17036     JMP ML
+17040     G2S A, Z  !shared
+17041     G6L A, Z  !shared
+17042     RIC P, B  !shared
+17043     JMP MS
+17045     G4S X, Z
+17047     JMP BA
+17051     G4L A, Z  !shared
+17052     SKN 2   !(07055)
+17053     JMP HX
+17055     G0L Y, Z
+17057     RIC Z, Z
+17061     G0L YY, Z
+17063     G4L X, Z
+17065     RDC Z, Z
+17067     G2L A, Z  !shared
+17070     RIC P, B  !shared
+17071     JMP MS
+17073     AZE A  !shared
+17074     G4S A, Z  !shared
+17075     RIC Y, Y  !shared
+17076     RIC Z, Z
+17100     G2L A, Z  !shared
+17101     RIC P, B  !shared
+17102     JMP MS
+17104     RDC Z, Z
+17106     RDC Y, Y  !shared
+17107     RIC P, B  !shared
+17110     JMP AD
+17112     LDB HC
+17114     SKN 2   !(07117)
+17115     JMP BA
+17117     TBB  !shared
+17120     STB HC
+17122     JMP RI
+17124     RTR Z, A
+17126     ELB HB
+17130     ASU A, B  !shared
+17131     SKZ 2   !(07134)
+17132     JMP B?
+17134     AAD Z, 00010
+17137     JMP H2
+17141     ELB MB
+17143     STB RB+1
+17145     TBB  !shared
+17146     STB 06767
+17150     RTR A, B  !shared
+17151     STB 06771
+17153     TBB  !shared
+17154     STB 06772
+17156     RTR X, B  !shared
+17157     STB 06763
+17161     TBB  !shared
+17162     STB 06764
+17164     RTR Y, B  !shared
+17165     STB 06760
+17167     TBB  !shared
+17170     STB 06761
+17172     RTR Z, B  !shared
+17173     STB RZ+1
+17175     TBB  !shared
+17176     STB RZ+2
+17200     AZE A  !shared
+17201     SKR 2   !(07204)
+17202     ALD A, 00010  !shared
+17204     ELB HB
+17206     AAD A, B  !shared
+17207     RTR A, Z
+17211     RDC B, B  !B <- 7777  !shared
+17212     STB HC
+17214     JMP 07055
+17216     G2L A, Z  !shared
+17217     G4L A, A
+17221     G0L A, A
+17223     G0L A, A
+17225     G0L A, A
+17227     JMP 00753
+17231     G0L A, A
+17233     G0L A, A
+17235     G0L A, A
+17237     JMP 00755
+17241     LDB OF
+17243     SKN 2   !(07246)
+17244     JMP B?
+17246     ELB RB+1
+17250     STB MB
+17252     TBB  !shared
+17253     STB MB+1
+17255     RTR YY, A
+17257     AAD A, 00140  !shared
+17261     RTR A, B  !shared
+17262     STB MH
+17264     RTR Y, B  !shared
+17265     STB 00775
+17267     ELB 06771
+17271     RTR B, A  !shared
+17272     ELB 06763
+17274     RTR B, X  !shared
+17275     ELB 06760
+17277     RTR B, Y  !shared
+17300     ELB RZ+1
+17302     RTR B, Z  !shared
+17303     LDB OM
+17305     SKN 2   !(07310)
+17306     RIC B, B
+17310     JMP MG
+17312     AZE A  !shared
+17313     LDB OF
+17315     SKZ 2   !(07320)
+17316     RDC B, A  !B <- 7777
+17320     RTR A, B  !shared
+17321     JMP 00742
+17323     RIC P, B  !shared
+17324     JMP OI
+17326     LDB OF
+17330     SKN 2   !(07333)
+17331     JMP B?
+17333     LDB OC
+17335     RTR B, A  !shared
+17336     ASU A, 00304  !shared
+17340     SKN 2   !(07343)
+17341     JMP 07415
+17343     ASU A, 00014  !shared
+17345     SKZ 2   !(07350)
+17346     JMP B?
+17350     RTR X, B  !shared
+17351     STB OM
+17353     RIC P, B  !shared
+17354     JMP 07370
+17356     LDB OM
+17360     RTR B, X  !shared
+17361     JMP 00732
+17363     RIC P, B  !shared
+17364     JMP 07370
+17366     JMP 06505
+17370     STB 07413
+17372     TBB  !shared
+17373     STB 07414
+17375     ALD X, 00100  !shared
+17377     AZE A  !shared
+17400     RIC P, B  !shared
+17401     JMP TO
+17403     RDC X, X
+17405     SKZ 2   !(07410)
+17406     JMP 07377
+17410     ELB 07413
+17412     RIC B, P  !shared
+17413     G0L A, A
+17415     RTR Z, B  !shared
+17416     STB DZ
+17420     TBB  !shared
+17421     STB 07502
+17423     RIC P, Z
+17425     JMP CR
+17427     RIC P, B  !shared
+17430     JMP AD
+17432     ALD A, 00240  !shared
+17434     RIC P, B  !shared
+17435     JMP TO
+17437     RIC P, B  !shared
+17440     JMP ML
+17442     RTR A, Z
+17444     RIC P, B  !shared
+17445     JMP O3
+17447     ELB DZ
+17451     RTR B, A  !shared
+17452     RTR Y, B  !shared
+17453     ASU A, B  !shared
+17454     SKN 2   !(07457)
+17455     RTR A, B  !shared
+17456     TBB  !shared
+17457     SKN 2   !(07462)
+17460     JMP BA
+17462     RIC Y, Y  !shared
+17463     RTR Y, A
+17465     AND A, 00077  !shared
+17467     SKN 2   !(07472)
+17470     JMP 07423
+17472     AND A, 00007  !shared
+17474     SKN 2   !(07477)
+17470     JMP 07423
+17472     AND A, 00007  !shared
+17474     SKN 2   !(07477)
+17475     JMP 07427
+17477     JMP 07432
+17501     G0L A, A
+
+17503     STB AE
+17505     TBB  !shared
+17506     STB 07546
+17510     RIC P, Z
+17512     JMP CR
+17514     RTR YY, A
+17516     AND A, 00010  !shared
+17520     SKZ 2   !(07523)
+17521     RTR X, A
+17523     AAD A, 00260  !shared
+17525     RIC P, B  !shared
+17526     JMP TO
+17530     RTR Y, Z
+17532     RIC P, B  !shared
+17533     JMP O4
+17535     ALD A, 00240  !shared
+17537     RIC P, B  !shared
+17540     JMP TO
+17542     ELB AE
+17544     RIC B, P  !shared
+17545     G0L A, A
+
+17547     ALD A, 00215  !shared
+17551     RIC P, B  !shared
+17552     JMP TO
+17554     ALD A, 00212  !shared
+17556     RTR Z, B  !shared
+17557     JMP TO
+
+17561     PLR  !shared
+17562     SKR 2   !(07565)
+17563     PLS
+17565     STB 07755
+17567     TBB  !shared
+17570     STB 07756
+17572     SKS 2   !(07575)
+17573     JMP 07605
+17575     RTR ZZ, A
+17577     SHR A  !shared
+17600     AAD A, 00260  !shared
+17602     RIC P, B  !shared
+17603     JMP TO
+17605     RTR ZZ, A
+17607     SHR A  !shared
+17610     RTR Z, A
+17612     SHL A  !shared
+17613     SHR A  !shared
+17614     SHR A  !shared
+17615     SHR A  !shared
+17616     SHR A  !shared
+17617     SHR A  !shared
+17620     AAD A, 00260  !shared
+17622     RIC P, B  !shared
+17623     JMP TO
+17625     RTR Z, A
+17627     SHR A  !shared
+17630     SHR A  !shared
+17631     SHR A  !shared
+17632     AND A, 00007  !shared
+17634     AAD A, 00260  !shared
+17636     RIC P, B  !shared
+17637     JMP TO
+17641     RTR Z, A
+17643     AND A, 00007  !shared
+17645     AAD A, 00260  !shared
+17647     ELB 07755
+17651     JMP TO
+
+17653     STB 07755
+17655     TBB  !shared
+17656     STB 07756
+17660     AZE Z
+17662     RTR Z, B  !shared
+17663     STB OF
+17665     STB OM
+17667     RIC P, B  !shared
+17670     JMP 00216
+17672     AND A, 00177  !shared
+17674     SKN 2   !(07677)
+17675     JMP 07667
+17677     AAD A, 00200  !shared
+17701     RTR A, B  !shared
+17702     STB OC
+17704     ASU A, 00270  !shared
+17706     SKM 2   !(07711)
+17707     JMP 07752
+17711     AAD A, 00010  !shared
+17713     SKP 2   !(07716)
+17714     JMP 07752
+17716     RTR ZZ, A
+17720     SHR A  !shared
+17721     RTR A, B  !shared
+17722     STB OM
+17724     RTR Z, B  !shared
+17725     AAD Z, B
+17727     RTR Z, B  !shared
+17730     AAD Z, B
+17732     RTR Z, B  !shared
+17733     AAD Z, B
+17735     LDB OC
+17737     RTR B, A  !shared
+17740     ASU A, 00260  !shared
+17742     RTR A, B  !shared
+17743     AAD Z, B
+17745     RDC B, B  !B <- 7777  !shared
+17746     STB OF
+17750     JMP 07667
+17752     ELB 07755
+17754     RIC B, P  !shared
+17755     G0L A, A
+17757     G0L A, A
+17761     G0Z A, A, I
+17763     JMP 07370
+17765     ALD X, 00117  !shared
+17767     RIC B, Y
+17771     STB 00476
+17773     AAD X, 00357  !shared
+17775     RTR B, Z  !shared
+17776     JMP 00477

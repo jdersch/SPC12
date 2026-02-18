@@ -142,7 +142,6 @@ namespace SPC12
                 _bit = bit;
                 if (_state == State.Idle && _bit == false)
                 {
-                    //Console.WriteLine("{0} START BIT {1}", _totalTime / 1000.0f, _isPrinter ? "P" : "K");
                     // Writing a space bit while in idle moves us out of Idle and into Start.
                     _bitCount = 0;
                     _bitTime = 0;
@@ -159,20 +158,16 @@ namespace SPC12
                     {
                         _byte &= (byte)~(1 << _bitCount);
                     }
-
-                    //Console.WriteLine("{0} bit {1} {2} {3}", _totalTime / 1000.0f, _bitCount, _bit, Helpers.ToOctal(_byte));
                 }
                 else
                 {
                     // we can just ignore it, a real teletype would send this somewhere but we don't
                     // need this data.
-                    //Console.WriteLine("{0} UNHANDLED BIT {1} {2}", _totalTime / 1000.0f, _bit, _isPrinter ? "P" : "K");
                 }
             }
 
             public void Step(float elapsedTimeMicroseconds)
             {
-                _totalTime += elapsedTimeMicroseconds;
                 _bitTime += elapsedTimeMicroseconds;
 
                 if (_bitTime < BitTimeMicroseconds)
@@ -196,17 +191,13 @@ namespace SPC12
 
                     case State.Start:
                         _state = State.Data;
-                        //Console.WriteLine("{0} -> Data state {1}", _totalTime / 1000.0f, _isPrinter ? "P" : "K");
                         break;
 
                     case State.Data:
                         _bitCount++;
 
-                        //Console.WriteLine("{0} -> Bit Count {1} {2}", _totalTime / 1000.0f, _bitCount, _isPrinter ? "P" : "K");
-
                         if (_bitCount >= 8)
                         {
-                            //Console.WriteLine("  -> Stop state {0}", _isPrinter ? "P" : "K");
                             _state = State.Stop;
                         }
                         break;
@@ -214,17 +205,14 @@ namespace SPC12
                     case State.Stop:
                         _bitCount++;
 
-                        //Console.WriteLine("{0} -> Bit Count {1} {2}", _totalTime / 1000.0f, _bitCount, _isPrinter ? "P" : "K");
                         if (_bitCount >= 9)    // two stop bits
                         {
-                            // TODO: this really doesn't belong here
                             if (_isPrinter)
                             {
-                                //Console.WriteLine("    '{0}' : (o{1})", (char)(_byte & 0x7f), Helpers.ToOctal(_byte));
+                                // TODO: move the actual console output somewhere else more appropriate
                                 Console.Write((char)(_byte & 0x7f));
                             }
 
-                            //Console.WriteLine("  -> Idle state {0}", _isPrinter ? "P" : "K");
                             _state = State.Idle;
                             _bitCount = 0;
                         }
@@ -236,7 +224,6 @@ namespace SPC12
             private bool _isPrinter;
             private byte _byte;
             private int _bitCount;
-            private float _totalTime;
             private bool _bit;
             private float _bitTime;
             private State _state;

@@ -15,15 +15,18 @@
             //p.E = 1;
 
             /*
-            for (int addr = Helpers.GetUshortForOctalString("120"); addr < Helpers.GetUshortForOctalString("255"); )
+            for (int addr = Helpers.GetUshortForOctalString("17470"); addr <= Helpers.GetUshortForOctalString("17777"); )
             {
                 string disassembly;
                 int nextAddr = d.Disassemble(addr, out disassembly);
                 Console.WriteLine("{0}     {1}", Helpers.ToOctal((ushort)addr), disassembly);
                 addr = nextAddr;
-            } */
+            } 
 
             Console.ReadLine();
+            */
+
+            ulong instCount = 0;
 
             while (true)
             {
@@ -49,17 +52,25 @@
 
                 ushort oldP = p.P;
                 int cycles = p.Step();
+                instCount++;
 
-                if (oldP == p.P)
+                if (p.P == oldP) //Helpers.GetUshortForOctalString("7445"))
                 {
                     Console.WriteLine("Stopping, infinite loop.");
                     break;
                 }
 
-                if (Console.KeyAvailable)
+                // only poll so often because KeyAvailable is apparently expensive!
+                if ((instCount % 10000) == 0 && Console.KeyAvailable)
                 {
                     // Extremely crude TTY input for now
-                    p.TTY.LatchKey((byte)Console.ReadKey(true).KeyChar);
+                    char key = Console.ReadKey(true).KeyChar;
+                    p.TTY.LatchKey((byte)key);
+
+                    if (key == '-')
+                    {
+                        Console.WriteLine(instCount);
+                    }
                 }
             }
         }

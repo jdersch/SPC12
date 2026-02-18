@@ -68,7 +68,7 @@ namespace SPC12
                         byte byte2 = GetImmediateCommandByte();
 
                         // consume the instruction bytes thus far
-                        P+=2;
+                        P++;
 
                         switch (byte1)
                         {
@@ -94,24 +94,28 @@ namespace SPC12
                                 cycles = AugmentMemoryAddressing(byte1, byte2);
                                 break;
                         }
+
+                        // consume last byte
+                        P++;
                     }
                     break;
 
                 // SHARED ARITHMETIC:   0001xxxx
                 case 0x1:
                     {
-                        P++;
+
                         byte byte2 = GetSharedCommandByte(byte1, ArithmeticLogicalSharedOffset);
                         cycles = ArithmeticLogical(byte2);
+                        P++;
                     }
                     break;
 
                 // SHARED REGISTER TRAN:0010xxxx
                 case 0x2:
                     {
-                        P++;
                         byte byte2 = GetSharedCommandByte(byte1, RegisterTransferSharedOffset);
                         RegisterTransfer(byte2);
+                        P++;
                         cycles = 2;
                     }
                     break;
@@ -119,9 +123,9 @@ namespace SPC12
                 // SHARED PULSE:        0011xxxx
                 case 0x3:
                     {
-                        P++;
                         byte byte2 = GetSharedCommandByte(byte1, PulseShiftSharedOffset);
                         PulseShift(byte2);
+                        P++;
                         cycles = 2;
                     }
                     break;
@@ -165,9 +169,9 @@ namespace SPC12
                 case 0xa:
                 case 0xb:
                     {
-                        P++;
                         byte byte2 = GetSharedCommandByte(byte1, AugmentedMemorySharedOffset);
                         cycles = AugmentMemoryAddressing(byte1, byte2);
+                        P++;
                     }
                     break;
 
@@ -343,7 +347,7 @@ namespace SPC12
 
             // Operand: 0 - B register, 1 - immediate value
             bool immediate = (byte2 & 0x08) != 0;
-            ushort operand = immediate ? ReadByte(P++) : B;
+            ushort operand = immediate ? ReadByte((P++) + 1) : B;
             Register reg = (Register)(byte2 & 0x7);
             switch (opcode)
             {
@@ -419,8 +423,6 @@ namespace SPC12
             int command = (byte2 >> 6);
             Register dest = (Register)((byte2 & 0x38) >> 3);
             Register src = (Register)(byte2 & 0x7);
-
-            // TODO: LINK logic sucks assssssss
             switch (command)
             {
                 case 0: // Transfer and add link bit
@@ -445,6 +447,9 @@ namespace SPC12
                     {
                         _link = (GetRegister(src) & 0xff) > 0;     // this should be zero, right?
                         SetRegister(dest, GetRegister(src) - 1);
+
+                        // problem: when modifying PC, code seems to assume that PC will be incremented after the transfer instruction
+                        // what is the expected order of operations in general?
                     }
                     break;
 
@@ -492,7 +497,6 @@ namespace SPC12
                         if (command == 8)
                         {
                             // shifts a 0 to the TTY
-                            //Console.WriteLine("zero to tty");
                             TTY.StrobePrinter(false);
                         }
                     }
@@ -517,7 +521,6 @@ namespace SPC12
                 case 0xa:   // with data out
                     {
                         int r = GetRegister(reg) & 0xff;
-                        //Console.WriteLine("circ out reg {0} {1}", reg, Helpers.ToOctal((ushort)r));
                         _link = (r & 0x1) != 0;     // the textual description of SHCO on p. 3-13 does not mention the Link register.  But it later says (r)0 -> (Link)...
                                                     // motorola docs also suggest that link is updated here
                         SetRegister(reg, (r >> 1) | (_link ? 0x80 : 0x0));
@@ -536,7 +539,6 @@ namespace SPC12
                         int r = GetRegister(reg) & 0xff;
                         bool bit = TTY.StrobeKeyboard();
                         int bitValue = bit ? 0x80 : 0x00;
-                        //Console.WriteLine("echo reg {0} {1}", reg, Helpers.ToOctal((ushort)r));
                         SetRegister(reg, ((r >> 1) | bitValue));
                         _link = (r & 0x1) != 0;
                         _plus = (r & 0x80) == 0;

@@ -5,7 +5,7 @@ namespace SPC12
     {
         public static string ToOctal(ushort value)
         {
-            return ToOctal(value, 4);
+            return ToOctal(value, 5);
         }
 
         public static string ToOctal(ushort value, int digits)
