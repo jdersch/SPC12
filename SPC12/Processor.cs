@@ -12,7 +12,7 @@ namespace SPC12
 
     }
 
-    internal class Processor
+    public class Processor
     {
         public static readonly float CycleTimeMicroseconds = 2.16f;
         public Processor(IMemoryBus mem, IIOBus io)

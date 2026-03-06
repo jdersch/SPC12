@@ -10,7 +10,7 @@ namespace SPC12
     /// <summary>
     /// Implements the SPC-12's built in, bit-banged TTY.  Sort of.
     /// </summary>
-    internal class TTY
+    public class TTY
     {
         public TTY()
         {
