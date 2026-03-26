@@ -19,5 +19,11 @@ namespace SPC12
             ushort value = Convert.ToUInt16(octal, 8);
             return value;
         }
+
+        public static uint GetUintForOctalString(string octal)
+        {
+            uint value = Convert.ToUInt32(octal, 8);
+            return value;
+        }
     }
 }
