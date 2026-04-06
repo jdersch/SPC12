@@ -9,17 +9,17 @@ namespace SPC12
             _mem = mem;
         }
 
-        public int Disassemble(int address, out string disassembly)
+        public int Disassemble(int address, int mode, out string disassembly)
         {
             disassembly = String.Empty;
-            byte byte1 = _mem.ReadByte(address);
+            byte byte1 = _mem.ReadByte(address, mode );
 
             int op = (byte1 >> 4);
             switch (op)
             {
                 case 0x0:
                     {
-                        byte byte2 = GetImmediateCommandByte(address);
+                        byte byte2 = GetImmediateCommandByte(address, mode);
 
                         // consume the instruction bytes thus far
                         address += 2;
@@ -31,7 +31,7 @@ namespace SPC12
                             // PULSE/SHIFT:         00001100
 
                             case 0x04:  // Arithmetic / Logical
-                                disassembly = ArithmeticLogical(byte2, ref address);
+                                disassembly = ArithmeticLogical(byte2, ref address, mode);
                                 break;
 
                             case 0x08:  // Register/Transfer
@@ -53,8 +53,8 @@ namespace SPC12
                 case 0x1:
                     {
                         address++;
-                        byte byte2 = GetSharedCommandByte(byte1, ArithmeticLogicalSharedOffset);
-                        disassembly = ArithmeticLogical(byte2, ref address) + "  !shared";
+                        byte byte2 = GetSharedCommandByte(byte1, ArithmeticLogicalSharedOffset, mode);
+                        disassembly = ArithmeticLogical(byte2, ref address, mode) + "  !shared";
                     }
                     break;
 
@@ -62,7 +62,7 @@ namespace SPC12
                 case 0x2:
                     {
                         address++;
-                        byte byte2 = GetSharedCommandByte(byte1, RegisterTransferSharedOffset);
+                        byte byte2 = GetSharedCommandByte(byte1, RegisterTransferSharedOffset, mode);
                         disassembly = RegisterTransfer(byte2) + "  !shared";
                     }
                     break;
@@ -71,7 +71,7 @@ namespace SPC12
                 case 0x3:
                     {
                         address++;
-                        byte byte2 = GetSharedCommandByte(byte1, PulseShiftSharedOffset);
+                        byte byte2 = GetSharedCommandByte(byte1, PulseShiftSharedOffset, mode);
                         disassembly =PulseShift(byte2) + "  !shared";
                     }
                     break;
@@ -86,7 +86,7 @@ namespace SPC12
                 // JUMP UNCONDITIONALLY:0110xxxx
                 case 0x6:
                     {
-                        ushort dest = GetImmediateAddress(byte1, address);
+                        ushort dest = GetImmediateAddress(byte1, address, mode);
                         disassembly = $"JMP {Helpers.ToOctal(dest)}";
                         address += 2;
                     }
@@ -95,7 +95,7 @@ namespace SPC12
                 // LOAD B EXTENDED:     0111xxxx
                 case 0x7:
                     {
-                        byte byte2 = GetImmediateAddressByte(address);
+                        byte byte2 = GetImmediateAddressByte(address, mode);
                         int eoa = ((byte1 & 0xf) << 8) | byte2;
 
                         disassembly = $"ELB {Helpers.ToOctal((ushort)eoa)}";
@@ -111,7 +111,7 @@ namespace SPC12
                 case 0xb:
                     {
                         address++;
-                        byte byte2 = GetSharedCommandByte(byte1, AugmentedMemorySharedOffset);
+                        byte byte2 = GetSharedCommandByte(byte1, AugmentedMemorySharedOffset, mode);
                         disassembly = AugmentMemoryAddressing(byte1, byte2) + "  !shared";
                     }
                     break;
@@ -119,28 +119,28 @@ namespace SPC12
                 // LOAD/STORE B:        110xxxxx or 111xxxxx
                 case 0xc:
                     {
-                        disassembly = $"STB {Helpers.ToOctal(GetImmediateAddress(byte1, address))}";
+                        disassembly = $"STB {Helpers.ToOctal(GetImmediateAddress(byte1, address, mode))}";
                         address += 2;
                     }
                     break;
 
                 case 0xd:
                     {
-                        disassembly = $"STB {Helpers.ToOctal(GetImmediateAddress(byte1, address))}, X";
+                        disassembly = $"STB {Helpers.ToOctal(GetImmediateAddress(byte1, address, mode))}, X";
                         address += 2;
                     }
                     break;
 
                 case 0xe:
                     {
-                        disassembly = $"LDB {Helpers.ToOctal(GetImmediateAddress(byte1, address))}";
+                        disassembly = $"LDB {Helpers.ToOctal(GetImmediateAddress(byte1, address, mode))}";
                         address += 2;
                     }
                     break;
 
                 case 0xf:
                     {
-                        disassembly = $"LDB {Helpers.ToOctal(GetImmediateAddress(byte1, address))}, X";
+                        disassembly = $"LDB {Helpers.ToOctal(GetImmediateAddress(byte1, address, mode))}, X";
                         address += 2;
                     }
                     break;
@@ -149,25 +149,25 @@ namespace SPC12
             return address;
         }
 
-        private byte GetImmediateCommandByte(int p)
+        private byte GetImmediateCommandByte(int p, int mode)
         {
-            return _mem.ReadByte(p + 1);
+            return _mem.ReadByte(p + 1, mode);
 
         }
 
-        private byte GetImmediateAddressByte(int p)
+        private byte GetImmediateAddressByte(int p, int mode)
         {
-            return _mem.ReadByte(p + 1);
+            return _mem.ReadByte(p + 1, mode);
 
         }
 
-        private ushort GetImmediateAddress(byte byte1, int p)
+        private ushort GetImmediateAddress(byte byte1, int p, int mode)
         {
-            byte byte2 = _mem.ReadByte(p + 1);
+            byte byte2 = _mem.ReadByte(p + 1, mode);
             return (ushort)(((byte1 & 0xf) << 8) | byte2);
         }
 
-        private byte GetSharedCommandByte(byte byte1, ushort sharedOffset)
+        private byte GetSharedCommandByte(byte byte1, ushort sharedOffset, int mode)
         {
             // shared
             int ccba;
@@ -183,17 +183,17 @@ namespace SPC12
             {
                 ccba = byte1 & 0xf;
             }
-            return _mem.ReadByte((ushort)(ccba + sharedOffset));
+            return _mem.ReadByte((ushort)(ccba + sharedOffset), mode);
         }
 
-        private string ArithmeticLogical(byte byte2, ref int p)
+        private string ArithmeticLogical(byte byte2, ref int p, int mode)
         {
             int opcode = (byte2 >> 4);
 
             // Operand: 0 - B register, 1 - immediate value
             bool immediate = (byte2 & 0x08) != 0;
 
-            string operand = (byte2 & 0x08) == 0 ? "B" : Helpers.ToOctal(_mem.ReadByte(p++));
+            string operand = (byte2 & 0x08) == 0 ? "B" : Helpers.ToOctal(_mem.ReadByte(p++, mode));
             Register reg = (Register)(byte2 & 0x7);
             switch (opcode)
             {

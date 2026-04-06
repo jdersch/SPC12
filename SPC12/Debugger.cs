@@ -69,12 +69,13 @@ namespace SPC12
                             try
                             {
                                 ushort start = Helpers.GetUshortForOctalString(tokens[1]);
+                                int mode = (start & 0x7fff) >> 12;
                                 ushort length = tokens.Length > 2 ? Helpers.GetUshortForOctalString(tokens[2]) : (ushort)1;
                                 Disassembler dis = new Disassembler(_system.Memory);
                                 for (ushort i = start; i < start + length;)
                                 {
                                     string disassembly;
-                                    i = (ushort)dis.Disassemble(i, out disassembly);
+                                    i = (ushort)dis.Disassemble(i, mode, out disassembly);
                                     Console.WriteLine("{0}  {1}", Helpers.ToOctal(i), disassembly);
                                 }
                             }
@@ -97,11 +98,12 @@ namespace SPC12
                             try
                             {
                                 ushort start = Helpers.GetUshortForOctalString(tokens[1]);
+                                int mode = (start & 0x7fff) >> 12;
                                 ushort length = tokens.Length > 2 ? Helpers.GetUshortForOctalString(tokens[2]) : (ushort)1;
 
                                 for (ushort i = start; i < start + length; i++)
                                 {
-                                    Console.WriteLine("{0}: {1}", Helpers.ToOctal(i), Helpers.ToOctal(_system.Memory.ReadByte(i)));
+                                    Console.WriteLine("{0}: {1}", Helpers.ToOctal(i), Helpers.ToOctal(_system.Memory.ReadByte(i, mode)));
                                 }
                             }
                             catch (Exception e)
@@ -139,9 +141,8 @@ namespace SPC12
             Disassembler dis = new Disassembler(_system.Memory);
             
             string disassembly;
-            ushort address = p.P < 0x800 ? p.P : (ushort)(p.P - 0x800 + p.E * 0x800);
-            dis.Disassemble(address, out disassembly);
-            Console.WriteLine("{0}  {1}", Helpers.ToOctal(address), disassembly);
+            dis.Disassemble(p.P, p.E, out disassembly);
+            Console.WriteLine("{0}{1}  {2}", Helpers.ToOctal((ushort)p.E, 1), Helpers.ToOctal(p.P, 4), disassembly);
         }
 
         private System _system;

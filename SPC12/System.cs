@@ -14,8 +14,8 @@ namespace SPC12
             _memory = new Memory(8);
             _processor = new Processor(_memory, _io);
 
-            _processor.P = 0xd40; // 16500 octal
-            _processor.E = 3;
+            _processor.P = Helpers.GetUshortForOctalString("2610"); // 0xd40; // 16500 octal
+            _processor.E = 1;
             //_processor.P = 0xa00;
             //_processor.E = 1;
         }

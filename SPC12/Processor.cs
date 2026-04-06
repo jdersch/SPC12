@@ -3,8 +3,8 @@ namespace SPC12
 {
     public interface IMemoryBus
     {
-        byte ReadByte(int address);
-        void WriteByte(int address, byte value);
+        byte ReadByte(int address, int mode);
+        void WriteByte(int address, int mode, byte value);
     }
 
     public interface IIOBus
@@ -821,32 +821,12 @@ namespace SPC12
 
         private byte ReadByte(int addr)
         {
-            addr = addr & 0xfff;
-
-            if (addr < 0x800)
-            {
-                return _mem.ReadByte(addr);
-            }
-            else
-            {
-                // map in the proper block
-                return _mem.ReadByte((addr - 0x800) + E * 0x800);
-            }
+            return _mem.ReadByte(addr, E);
         }
 
         private void WriteByte(int addr, byte val)
         {
-            addr = addr & 0xfff;
-
-            if (addr < 0x800)
-            {
-                _mem.WriteByte(addr, val);
-            }
-            else
-            {
-                // map in the proper block
-                _mem.WriteByte((addr - 0x800) + E * 0x800, val);
-            }
+            _mem.WriteByte(addr, E, val);
         }
 
         private enum Register
